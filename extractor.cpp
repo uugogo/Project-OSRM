@@ -62,44 +62,47 @@ int main (int argc, char *argv[]) {
         // parse options
         try {
             // declare a group of options that will be allowed only on command line
-            boost::program_options::options_description generic_options_description("Options");
-            generic_options_description.add_options()
+            boost::program_options::options_description generic_options("Options");
+            generic_options.add_options()
                 ("version,v", "Show version")
                 ("help,h", "Show this help message")
-                ("profile,p", boost::program_options::value<std::string>(&profile_path)->default_value(default_profile_path),
-                    "Path to LUA routing profile")
                 ("config,c", boost::program_options::value<std::string>(&config_file_path)->default_value(default_config_path),
                       "Path to a configuration file.");
 
             // declare a group of options that will be 
             // allowed both on command line and in config file
-            boost::program_options::options_description config_options_description("Configuration");
-            config_options_description.add_options()
+            boost::program_options::options_description config_options("Configuration");
+            config_options.add_options()
+                ("profile,p", boost::program_options::value<std::string>(&profile_path)->default_value(default_profile_path),
+                    "Path to LUA routing profile")
                 ("threads,t", boost::program_options::value<int>(&requested_num_threads)->default_value(default_num_threads), 
                     "Number of threads to use");
 
             // hidden options, will be allowed both on command line and in config file,
             // but will not be shown to the user.
-            boost::program_options::options_description hidden_options_description("Hidden options");
-            hidden_options_description.add_options()
-                ("input,i", boost::program_options::value<std::string>(&input_path)->required(),
+            boost::program_options::options_description hidden_options("Hidden options");
+            hidden_options.add_options()
+                ("input,i", boost::program_options::value<std::string>(&input_path),
                     "Input file in .osm, .osm.bz2 or .osm.pbf format");
 
+            // positional option
+            boost::program_options::positional_options_description positional_options;
+            positional_options.add("input", 1);
+
+            // combine above options for parsing
             boost::program_options::options_description cmdline_options;
-            cmdline_options.add(generic_options_description).add(config_options_description).add(hidden_options_description);
+            cmdline_options.add(generic_options).add(config_options).add(hidden_options);
 
             boost::program_options::options_description config_file_options;
-            config_file_options.add(config_options_description).add(hidden_options_description);
+            config_file_options.add(config_options).add(hidden_options);
 
-            boost::program_options::options_description visible(name_of_binary + " <input.osm/.osm.bz2/.osm.pbf> [<profile.lua>]");
-            visible.add(generic_options_description).add(config_options_description);
+            boost::program_options::options_description visible_options(name_of_binary + " <input.osm/.osm.bz2/.osm.pbf> [<profile.lua>]");
+            visible_options.add(generic_options).add(config_options);
 
-            boost::program_options::positional_options_description positional_options_description;
-            positional_options_description.add("input", 1);
-
+            // parse command line options
             boost::program_options::variables_map vm;
             boost::program_options::store(boost::program_options::command_line_parser(argc, argv).
-                options(cmdline_options).positional(positional_options_description).run(), vm);
+                options(cmdline_options).positional(positional_options).run(), vm);
 
             if(vm.count("version")) {
                 SimpleLogger().Write() << std::endl << name_of_binary << ", version " << version_string;
@@ -107,32 +110,33 @@ int main (int argc, char *argv[]) {
             }
 
             if(vm.count("help")) {
-                SimpleLogger().Write() << visible;
+                SimpleLogger().Write() << visible_options;
                 return 0;
             }
 
-            // verify options, throws exception if problems
             boost::program_options::notify(vm);
 
-            //parse config file
+            // parse config file
             std::ifstream ifs(config_file_path.c_str());
             if(ifs) {
                 SimpleLogger().Write() << "Config file: " << config_file_path;
-                store(parse_config_file(ifs, config_file_options), vm);
-                notify(vm);
+                boost::program_options::store(parse_config_file(ifs, config_file_options), vm);
+                boost::program_options::notify(vm);
             }
             else if(!vm["config"].defaulted()) {
+                // complain if user supplied a config file, but it wasn't found
                 SimpleLogger().Write() << "Cannot open config file: " << config_file_path;
-                return 0;
+                return -1;
+            }
+
+            if(!vm.count("input")) {
+                SimpleLogger().Write(logWARNING) << "An input file must be specified.";
+                return -1;
             }
 
             SimpleLogger().Write() << "Input file: " << input_path;
             SimpleLogger().Write() << "Profile: " << profile_path;
             SimpleLogger().Write() << "Threads: " << requested_num_threads;
-
-        } catch(boost::program_options::required_option& e) {
-            SimpleLogger().Write(logWARNING) << "An input file must be specified.";
-            return -1;
         } catch(boost::program_options::too_many_positional_options_error& e) {
             SimpleLogger().Write(logWARNING) << "Only one input file can be specified.";
             return -1;
