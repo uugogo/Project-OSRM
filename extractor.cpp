@@ -48,15 +48,15 @@ int main (int argc, char *argv[]) {
 
         std::string binName = boost::filesystem::basename(argv[0]);
 
-        const std::string versionString = "0.3.4";
-        const std::string defaultProfilePath = "profile.lua";
+        const std::string version_string = "0.3.4";
+        const std::string default_profile_path = "profile.lua";
         const int default_num_threads = 10;
-        
+
         std::string inputPath;
         std::string profilePath;
         std::string config_file_path;
         int requested_num_threads = default_num_threads;
-        
+
         // parse options
         try {
             // declare a group of options that will be allowed only on command line
@@ -64,7 +64,7 @@ int main (int argc, char *argv[]) {
             generic.add_options()
                 ("version,v", "Show version")
                 ("help,h", "Show this help message")
-                ("profile,p", boost::program_options::value<std::string>(&profilePath)->default_value(defaultProfilePath),
+                ("profile,p", boost::program_options::value<std::string>(&profilePath)->default_value(default_profile_path),
                     "Path to LUA routing profile")
                 ("config,c", boost::program_options::value<std::string>(&config_file_path)->default_value("extract.cfg"),
                       "Path to a configuration file.")
@@ -103,7 +103,7 @@ int main (int argc, char *argv[]) {
                 options(cmdline_options).positional(p).run(), vm);
 
             if(vm.count("version")) {
-                SimpleLogger().Write(logINFO) << std::endl << binName << ", version " << versionString;
+                SimpleLogger().Write(logINFO) << std::endl << binName << ", version " << version_string;
                 return 0;
             }
 
@@ -126,7 +126,7 @@ int main (int argc, char *argv[]) {
                 SimpleLogger().Write(logINFO) << "Cannot open config file: " << config_file_path;
                 return 0;
             }
-            
+
             SimpleLogger().Write(logINFO) << "Input file: " << inputPath;
             SimpleLogger().Write(logINFO) << "Profile: " << profilePath;
             SimpleLogger().Write(logINFO) << "Threads: " << requested_num_threads;
