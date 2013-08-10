@@ -110,7 +110,7 @@ int main (int argc, char *argv[]) {
 
             if(vm.count("help")) {
                 SimpleLogger().Write(logINFO) << visible;
-                return 1;
+                return 0;
             }
 
             // verify options, throws exception if problems
