@@ -34,6 +34,7 @@ or see http://www.gnu.org/licenses/agpl.txt.
 #include <cstdlib>
 
 #include <boost/program_options.hpp>
+
 #include <iostream>
 #include <fstream>
 #include <string>
@@ -46,7 +47,7 @@ int main (int argc, char *argv[]) {
         LogPolicy::GetInstance().Unmute();
         double startup_time = get_timestamp();
 
-        std::string binName = boost::filesystem::basename(argv[0]);
+        std::string name_of_binary = boost::filesystem::basename(argv[0]);
 
         const std::string version_string = "0.3.4";
         const std::string default_profile_path = "profile.lua";
@@ -68,24 +69,21 @@ int main (int argc, char *argv[]) {
                 ("profile,p", boost::program_options::value<std::string>(&profile_path)->default_value(default_profile_path),
                     "Path to LUA routing profile")
                 ("config,c", boost::program_options::value<std::string>(&config_file_path)->default_value(default_config_path),
-                      "Path to a configuration file.")
-                ;
+                      "Path to a configuration file.");
 
             // declare a group of options that will be 
             // allowed both on command line and in config file
             boost::program_options::options_description config_options_description("Configuration");
             config_options_description.add_options()
                 ("threads,t", boost::program_options::value<int>(&requested_num_threads)->default_value(default_num_threads), 
-                    "Number of threads to use")
-                ;
+                    "Number of threads to use");
 
             // hidden options, will be allowed both on command line and in config file,
             // but will not be shown to the user.
             boost::program_options::options_description hidden_options_description("Hidden options");
             hidden_options_description.add_options()
                 ("input,i", boost::program_options::value<std::string>(&input_path)->required(),
-                    "Input file in .osm, .osm.bz2 or .osm.pbf format")
-                ;
+                    "Input file in .osm, .osm.bz2 or .osm.pbf format");
 
             boost::program_options::options_description cmdline_options;
             cmdline_options.add(generic_options_description).add(config_options_description).add(hidden_options_description);
@@ -93,18 +91,18 @@ int main (int argc, char *argv[]) {
             boost::program_options::options_description config_file_options;
             config_file_options.add(config_options_description).add(hidden_options_description);
 
-            boost::program_options::options_description visible(binName + " <input.osm/.osm.bz2/.osm.pbf> [<profile.lua>]");
+            boost::program_options::options_description visible(name_of_binary + " <input.osm/.osm.bz2/.osm.pbf> [<profile.lua>]");
             visible.add(generic_options_description).add(config_options_description);
 
-            boost::program_options::positional_options_description p;
-            p.add("input", 1);
+            boost::program_options::positional_options_description positional_options_description;
+            positional_options_description.add("input", 1);
 
             boost::program_options::variables_map vm;
             boost::program_options::store(boost::program_options::command_line_parser(argc, argv).
-                options(cmdline_options).positional(p).run(), vm);
+                options(cmdline_options).positional(positional_options_description).run(), vm);
 
             if(vm.count("version")) {
-                SimpleLogger().Write(logINFO) << std::endl << binName << ", version " << version_string;
+                SimpleLogger().Write(logINFO) << std::endl << name_of_binary << ", version " << version_string;
                 return 0;
             }
 
@@ -215,7 +213,7 @@ int main (int argc, char *argv[]) {
             "extraction finished after " << get_timestamp() - startup_time <<
             "s";
 
-         SimpleLogger().Write() << "\nRun:\n./" << binName <<" " <<
+         SimpleLogger().Write() << "\nRun:\n./" << name_of_binary <<" " <<
             output_file_name <<
             " " <<
             restrictionsFileName <<
