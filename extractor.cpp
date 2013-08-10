@@ -102,12 +102,12 @@ int main (int argc, char *argv[]) {
                 options(cmdline_options).positional(positional_options_description).run(), vm);
 
             if(vm.count("version")) {
-                SimpleLogger().Write(logINFO) << std::endl << name_of_binary << ", version " << version_string;
+                SimpleLogger().Write() << std::endl << name_of_binary << ", version " << version_string;
                 return 0;
             }
 
             if(vm.count("help")) {
-                SimpleLogger().Write(logINFO) << visible;
+                SimpleLogger().Write() << visible;
                 return 0;
             }
 
@@ -117,18 +117,18 @@ int main (int argc, char *argv[]) {
             //parse config file
             std::ifstream ifs(config_file_path.c_str());
             if(ifs) {
-                SimpleLogger().Write(logINFO) << "Config file: " << config_file_path;
+                SimpleLogger().Write() << "Config file: " << config_file_path;
                 store(parse_config_file(ifs, config_file_options), vm);
                 notify(vm);
             }
             else if(!vm["config"].defaulted()) {
-                SimpleLogger().Write(logINFO) << "Cannot open config file: " << config_file_path;
+                SimpleLogger().Write() << "Cannot open config file: " << config_file_path;
                 return 0;
             }
 
-            SimpleLogger().Write(logINFO) << "Input file: " << input_path;
-            SimpleLogger().Write(logINFO) << "Profile: " << profile_path;
-            SimpleLogger().Write(logINFO) << "Threads: " << requested_num_threads;
+            SimpleLogger().Write() << "Input file: " << input_path;
+            SimpleLogger().Write() << "Profile: " << profile_path;
+            SimpleLogger().Write() << "Threads: " << requested_num_threads;
 
         } catch(boost::program_options::required_option& e) {
             SimpleLogger().Write(logWARNING) << "An input file must be specified.";
