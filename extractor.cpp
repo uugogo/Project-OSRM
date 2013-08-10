@@ -23,8 +23,6 @@ or see http://www.gnu.org/licenses/agpl.txt.
 #include "Extractor/ScriptingEnvironment.h"
 #include "Extractor/PBFParser.h"
 #include "Extractor/XMLParser.h"
-#include "Util/IniFile.h"
-#include "Util/InputFileUtil.h"
 #include "Util/MachineInfo.h"
 #include "Util/OpenMPWrapper.h"
 #include "Util/OSRMException.h"
@@ -49,12 +47,16 @@ int main (int argc, char *argv[]) {
         double startup_time = get_timestamp();
 
         std::string binName = boost::filesystem::basename(argv[0]);
-        std::string versionString = "0.3.4";
-        std::string defaultProfilePath = "profile.lua";
+
+        const std::string versionString = "0.3.4";
+        const std::string defaultProfilePath = "profile.lua";
+        const int default_num_threads = 10;
         
         std::string inputPath;
         std::string profilePath;
-
+        std::string config_file_path;
+        int requested_num_threads = default_num_threads;
+        
         // parse options
         try {
             // declare a group of options that will be allowed only on command line
@@ -62,21 +64,36 @@ int main (int argc, char *argv[]) {
             generic.add_options()
                 ("version,v", "Show version")
                 ("help,h", "Show this help message")
-                ("profile,p", boost::program_options::value<std::string>(&profilePath)->default_value(defaultProfilePath), "Path to LUA routing profile")
+                ("profile,p", boost::program_options::value<std::string>(&profilePath)->default_value(defaultProfilePath),
+                    "Path to LUA routing profile")
+                ("config,c", boost::program_options::value<std::string>(&config_file_path)->default_value("extract.cfg"),
+                      "Path to a configuration file.")
+                ;
+
+            // declare a group of options that will be 
+            // allowed both on command line and in config file
+            boost::program_options::options_description config("Configuration");
+            config.add_options()
+                ("threads,t", boost::program_options::value<int>(&requested_num_threads)->default_value(default_num_threads), 
+                    "Number of threads to use")
                 ;
 
             // hidden options, will be allowed both on command line and in config file,
             // but will not be shown to the user.
             boost::program_options::options_description hidden("Hidden options");
             hidden.add_options()
-                ("input,i", boost::program_options::value<std::string>(&inputPath)->required(), "Input file in .osm, .osm.bz2 or .osm.pbf format")
+                ("input,i", boost::program_options::value<std::string>(&inputPath)->required(),
+                    "Input file in .osm, .osm.bz2 or .osm.pbf format")
                 ;
 
             boost::program_options::options_description cmdline_options;
-            cmdline_options.add(generic).add(hidden);
+            cmdline_options.add(generic).add(config).add(hidden);
+
+            boost::program_options::options_description config_file_options;
+            config_file_options.add(config).add(hidden);
 
             boost::program_options::options_description visible(binName + " <input.osm/.osm.bz2/.osm.pbf> [<profile.lua>]");
-            visible.add(generic);
+            visible.add(generic).add(config);
 
             boost::program_options::positional_options_description p;
             p.add("input", 1);
@@ -98,8 +115,21 @@ int main (int argc, char *argv[]) {
             // verify options, throws exception if problems
             boost::program_options::notify(vm);
 
+            //parse config file
+            std::ifstream ifs(config_file_path.c_str());
+            if(ifs) {
+                SimpleLogger().Write(logINFO) << "Config file: " << config_file_path;
+                store(parse_config_file(ifs, config_file_options), vm);
+                notify(vm);
+            }
+            else if(!vm["config"].defaulted()) {
+                SimpleLogger().Write(logINFO) << "Cannot open config file: " << config_file_path;
+                return 0;
+            }
+            
             SimpleLogger().Write(logINFO) << "Input file: " << inputPath;
             SimpleLogger().Write(logINFO) << "Profile: " << profilePath;
+            SimpleLogger().Write(logINFO) << "Threads: " << requested_num_threads;
 
         } catch(boost::program_options::required_option& e) {
             SimpleLogger().Write(logWARNING) << "An input file must be specified.";
@@ -115,15 +145,7 @@ int main (int argc, char *argv[]) {
         /*** Setup Scripting Environment ***/
         ScriptingEnvironment scriptingEnvironment(profilePath.c_str());
 
-        unsigned number_of_threads = omp_get_num_procs();
-        if(testDataFile("extractor.ini")) {
-            IniFile extractorConfig("extractor.ini");
-            unsigned rawNumber = stringToInt(extractorConfig.GetParameter("Threads"));
-            if( rawNumber != 0 && rawNumber <= number_of_threads) {
-                number_of_threads = rawNumber;
-            }
-        }
-        omp_set_num_threads(number_of_threads);
+        omp_set_num_threads( std::min( omp_get_num_procs(), requested_num_threads) );
 
         bool file_has_pbf_format(false);
         std::string output_file_name(inputPath);
