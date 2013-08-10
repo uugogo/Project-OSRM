@@ -51,9 +51,10 @@ int main (int argc, char *argv[]) {
         const std::string version_string = "0.3.4";
         const std::string default_profile_path = "profile.lua";
         const int default_num_threads = 10;
+        const std::string default_config_path = "extract.cfg";
 
-        std::string inputPath;
-        std::string profilePath;
+        std::string input_path;
+        std::string profile_path;
         std::string config_file_path;
         int requested_num_threads = default_num_threads;
 
@@ -64,9 +65,9 @@ int main (int argc, char *argv[]) {
             generic_options_description.add_options()
                 ("version,v", "Show version")
                 ("help,h", "Show this help message")
-                ("profile,p", boost::program_options::value<std::string>(&profilePath)->default_value(default_profile_path),
+                ("profile,p", boost::program_options::value<std::string>(&profile_path)->default_value(default_profile_path),
                     "Path to LUA routing profile")
-                ("config,c", boost::program_options::value<std::string>(&config_file_path)->default_value("extract.cfg"),
+                ("config,c", boost::program_options::value<std::string>(&config_file_path)->default_value(default_config_path),
                       "Path to a configuration file.")
                 ;
 
@@ -82,7 +83,7 @@ int main (int argc, char *argv[]) {
             // but will not be shown to the user.
             boost::program_options::options_description hidden_options_description("Hidden options");
             hidden_options_description.add_options()
-                ("input,i", boost::program_options::value<std::string>(&inputPath)->required(),
+                ("input,i", boost::program_options::value<std::string>(&input_path)->required(),
                     "Input file in .osm, .osm.bz2 or .osm.pbf format")
                 ;
 
@@ -127,8 +128,8 @@ int main (int argc, char *argv[]) {
                 return 0;
             }
 
-            SimpleLogger().Write(logINFO) << "Input file: " << inputPath;
-            SimpleLogger().Write(logINFO) << "Profile: " << profilePath;
+            SimpleLogger().Write(logINFO) << "Input file: " << input_path;
+            SimpleLogger().Write(logINFO) << "Profile: " << profile_path;
             SimpleLogger().Write(logINFO) << "Threads: " << requested_num_threads;
 
         } catch(boost::program_options::required_option& e) {
@@ -143,13 +144,13 @@ int main (int argc, char *argv[]) {
         }
 
         /*** Setup Scripting Environment ***/
-        ScriptingEnvironment scriptingEnvironment(profilePath.c_str());
+        ScriptingEnvironment scriptingEnvironment(profile_path.c_str());
 
         omp_set_num_threads( std::min( omp_get_num_procs(), requested_num_threads) );
 
         bool file_has_pbf_format(false);
-        std::string output_file_name(inputPath);
-        std::string restrictionsFileName(inputPath);
+        std::string output_file_name(input_path);
+        std::string restrictionsFileName(input_path);
         std::string::size_type pos = output_file_name.find(".osm.bz2");
         if(pos==std::string::npos) {
             pos = output_file_name.find(".osm.pbf");
@@ -190,9 +191,9 @@ int main (int argc, char *argv[]) {
         extractCallBacks = new ExtractorCallbacks(&externalMemory, &stringMap);
         BaseParser* parser;
         if(file_has_pbf_format) {
-            parser = new PBFParser(inputPath.c_str(), extractCallBacks, scriptingEnvironment);
+            parser = new PBFParser(input_path.c_str(), extractCallBacks, scriptingEnvironment);
         } else {
-            parser = new XMLParser(inputPath.c_str(), extractCallBacks, scriptingEnvironment);
+            parser = new XMLParser(input_path.c_str(), extractCallBacks, scriptingEnvironment);
         }
 
         if(!parser->ReadHeader()) {
