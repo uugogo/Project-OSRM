@@ -35,6 +35,7 @@ or see http://www.gnu.org/licenses/agpl.txt.
 
 #include <cstdlib>
 
+#include <boost/program_options.hpp>
 #include <iostream>
 #include <fstream>
 #include <string>
@@ -47,16 +48,72 @@ int main (int argc, char *argv[]) {
         LogPolicy::GetInstance().Unmute();
         double startup_time = get_timestamp();
 
-        if(argc < 2) {
-            SimpleLogger().Write(logWARNING) <<
-                "usage: \n" <<
-                argv[0] <<
-                " <file.osm/.osm.bz2/.osm.pbf> [<profile.lua>]";
+        std::string binName = boost::filesystem::basename(argv[0]);
+        std::string versionString = "0.3.4";
+        std::string defaultProfilePath = "profile.lua";
+        
+        std::string inputPath;
+        std::string profilePath;
+
+        // parse options
+        try {
+            // declare a group of options that will be allowed only on command line
+            boost::program_options::options_description generic("Options");
+            generic.add_options()
+                ("version,v", "Show version")
+                ("help,h", "Show this help message")
+                ("profile,p", boost::program_options::value<std::string>(&profilePath)->default_value(defaultProfilePath), "Path to LUA routing profile")
+                ;
+
+            // hidden options, will be allowed both on command line and in config file,
+            // but will not be shown to the user.
+            boost::program_options::options_description hidden("Hidden options");
+            hidden.add_options()
+                ("input,i", boost::program_options::value<std::string>(&inputPath)->required(), "Input file in .osm, .osm.bz2 or .osm.pbf format")
+                ;
+
+            boost::program_options::options_description cmdline_options;
+            cmdline_options.add(generic).add(hidden);
+
+            boost::program_options::options_description visible(binName + " <input.osm/.osm.bz2/.osm.pbf> [<profile.lua>]");
+            visible.add(generic);
+
+            boost::program_options::positional_options_description p;
+            p.add("input", 1);
+
+            boost::program_options::variables_map vm;
+            boost::program_options::store(boost::program_options::command_line_parser(argc, argv).
+                options(cmdline_options).positional(p).run(), vm);
+
+            if(vm.count("version")) {
+                SimpleLogger().Write(logINFO) << std::endl << binName << ", version " << versionString;
+                return 0;
+            }
+
+            if(vm.count("help")) {
+                SimpleLogger().Write(logINFO) << visible;
+                return 1;
+            }
+
+            // verify options, throws exception if problems
+            boost::program_options::notify(vm);
+
+            SimpleLogger().Write(logINFO) << "Input file: " << inputPath;
+            SimpleLogger().Write(logINFO) << "Profile: " << profilePath;
+
+        } catch(boost::program_options::required_option& e) {
+            SimpleLogger().Write(logWARNING) << "An input file must be specified.";
+            return -1;
+        } catch(boost::program_options::too_many_positional_options_error& e) {
+            SimpleLogger().Write(logWARNING) << "Only one input file can be specified.";
+            return -1;
+        } catch(boost::program_options::error& e) {
+            SimpleLogger().Write(logWARNING) << e.what();
             return -1;
         }
 
         /*** Setup Scripting Environment ***/
-        ScriptingEnvironment scriptingEnvironment((argc > 2 ? argv[2] : "profile.lua"));
+        ScriptingEnvironment scriptingEnvironment(profilePath.c_str());
 
         unsigned number_of_threads = omp_get_num_procs();
         if(testDataFile("extractor.ini")) {
@@ -68,10 +125,9 @@ int main (int argc, char *argv[]) {
         }
         omp_set_num_threads(number_of_threads);
 
-        SimpleLogger().Write() << "extracting data from input file " << argv[1];
         bool file_has_pbf_format(false);
-        std::string output_file_name(argv[1]);
-        std::string restrictionsFileName(argv[1]);
+        std::string output_file_name(inputPath);
+        std::string restrictionsFileName(inputPath);
         std::string::size_type pos = output_file_name.find(".osm.bz2");
         if(pos==std::string::npos) {
             pos = output_file_name.find(".osm.pbf");
@@ -112,9 +168,9 @@ int main (int argc, char *argv[]) {
         extractCallBacks = new ExtractorCallbacks(&externalMemory, &stringMap);
         BaseParser* parser;
         if(file_has_pbf_format) {
-            parser = new PBFParser(argv[1], extractCallBacks, scriptingEnvironment);
+            parser = new PBFParser(inputPath.c_str(), extractCallBacks, scriptingEnvironment);
         } else {
-            parser = new XMLParser(argv[1], extractCallBacks, scriptingEnvironment);
+            parser = new XMLParser(inputPath.c_str(), extractCallBacks, scriptingEnvironment);
         }
 
         if(!parser->ReadHeader()) {
@@ -136,13 +192,13 @@ int main (int argc, char *argv[]) {
             "extraction finished after " << get_timestamp() - startup_time <<
             "s";
 
-         SimpleLogger().Write() << "\nRun:\n./osrm-prepare " <<
+         SimpleLogger().Write() << "\nRun:\n./" << binName <<" " <<
             output_file_name <<
             " " <<
             restrictionsFileName <<
             std::endl;
     } catch(std::exception & e) {
-        SimpleLogger().Write(logWARNING) << "unhandled exception: " << e.what();
+        SimpleLogger().Write(logWARNING) << "Unhandled exception: " << e.what();
         return -1;
     }
     return 0;
