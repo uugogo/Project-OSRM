@@ -60,8 +60,8 @@ int main (int argc, char *argv[]) {
         // parse options
         try {
             // declare a group of options that will be allowed only on command line
-            boost::program_options::options_description generic("Options");
-            generic.add_options()
+            boost::program_options::options_description generic_options_description("Options");
+            generic_options_description.add_options()
                 ("version,v", "Show version")
                 ("help,h", "Show this help message")
                 ("profile,p", boost::program_options::value<std::string>(&profilePath)->default_value(default_profile_path),
@@ -72,28 +72,28 @@ int main (int argc, char *argv[]) {
 
             // declare a group of options that will be 
             // allowed both on command line and in config file
-            boost::program_options::options_description config("Configuration");
-            config.add_options()
+            boost::program_options::options_description config_options_description("Configuration");
+            config_options_description.add_options()
                 ("threads,t", boost::program_options::value<int>(&requested_num_threads)->default_value(default_num_threads), 
                     "Number of threads to use")
                 ;
 
             // hidden options, will be allowed both on command line and in config file,
             // but will not be shown to the user.
-            boost::program_options::options_description hidden("Hidden options");
-            hidden.add_options()
+            boost::program_options::options_description hidden_options_description("Hidden options");
+            hidden_options_description.add_options()
                 ("input,i", boost::program_options::value<std::string>(&inputPath)->required(),
                     "Input file in .osm, .osm.bz2 or .osm.pbf format")
                 ;
 
             boost::program_options::options_description cmdline_options;
-            cmdline_options.add(generic).add(config).add(hidden);
+            cmdline_options.add(generic_options_description).add(config_options_description).add(hidden_options_description);
 
             boost::program_options::options_description config_file_options;
-            config_file_options.add(config).add(hidden);
+            config_file_options.add(config_options_description).add(hidden_options_description);
 
             boost::program_options::options_description visible(binName + " <input.osm/.osm.bz2/.osm.pbf> [<profile.lua>]");
-            visible.add(generic).add(config);
+            visible.add(generic_options_description).add(config_options_description);
 
             boost::program_options::positional_options_description p;
             p.add("input", 1);
