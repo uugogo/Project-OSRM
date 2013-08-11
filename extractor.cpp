@@ -100,36 +100,35 @@ int main (int argc, char *argv[]) {
             visible_options.add(generic_options).add(config_options);
 
             // parse command line options
-            boost::program_options::variables_map vm;
+            boost::program_options::variables_map option_variables;
             boost::program_options::store(boost::program_options::command_line_parser(argc, argv).
-                options(cmdline_options).positional(positional_options).run(), vm);
+                options(cmdline_options).positional(positional_options).run(), option_variables);
 
-            if(vm.count("version")) {
+            if(option_variables.count("version")) {
                 SimpleLogger().Write() << std::endl << name_of_binary << ", version " << version_string;
                 return 0;
             }
 
-            if(vm.count("help")) {
+            if(option_variables.count("help")) {
                 SimpleLogger().Write() << visible_options;
                 return 0;
             }
 
-            boost::program_options::notify(vm);
+            boost::program_options::notify(option_variables);
 
             // parse config file
             std::ifstream ifs(config_file_path.c_str());
             if(ifs) {
                 SimpleLogger().Write() << "Config file: " << config_file_path;
-                boost::program_options::store(parse_config_file(ifs, config_file_options), vm);
-                boost::program_options::notify(vm);
-            }
-            else if(!vm["config"].defaulted()) {
+                boost::program_options::store(parse_config_file(ifs, config_file_options), option_variables);
+                boost::program_options::notify(option_variables);
+            } else if(!option_variables["config"].defaulted()) {
                 // complain if user supplied a config file, but it wasn't found
                 SimpleLogger().Write() << "Cannot open config file: " << config_file_path;
                 return -1;
             }
 
-            if(!vm.count("input")) {
+            if(!option_variables.count("input")) {
                 SimpleLogger().Write(logWARNING) << "An input file must be specified.";
                 return -1;
             }
