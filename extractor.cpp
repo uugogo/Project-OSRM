@@ -52,7 +52,7 @@ int main (int argc, char *argv[]) {
         const std::string version_string = "0.3.4";
         const std::string default_profile_path = "profile.lua";
         const int default_num_threads = 10;
-        const std::string default_config_path = "extract.cfg";
+        const std::string default_config_path = "extractor.ini";
 
         std::string input_path;
         std::string profile_path;
