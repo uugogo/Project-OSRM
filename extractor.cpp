@@ -134,6 +134,11 @@ int main (int argc, char *argv[]) {
                 return -1;
             }
 
+            if(requested_num_threads<1) {
+                SimpleLogger().Write(logWARNING) << "Number of threads must be 1 or larger.";
+                return -1;
+            }
+
             SimpleLogger().Write() << "Input file: " << input_path;
             SimpleLogger().Write() << "Profile: " << profile_path;
             SimpleLogger().Write() << "Threads: " << requested_num_threads;
