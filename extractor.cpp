@@ -53,9 +53,9 @@ int main (int argc, char *argv[]) {
         const int default_num_threads = 10;
         const std::string default_config_path = "extractor.ini";
 
-        inut_file_path config_file_path;
-        inut_file_path input_path;
-        inut_file_path profile_path;
+        input_file_path config_file_path;
+        input_file_path input_path;
+        input_file_path profile_path;
         int requested_num_threads = default_num_threads;
 
         // parse options
@@ -65,14 +65,14 @@ int main (int argc, char *argv[]) {
             generic_options.add_options()
                 ("version,v", "Show version")
                 ("help,h", "Show this help message")
-                ("config,c", boost::program_options::value<inut_file_path>(&config_file_path)->default_value(default_config_path),
+                ("config,c", boost::program_options::value<input_file_path>(&config_file_path)->default_value(default_config_path),
                       "Path to a configuration file.");
 
             // declare a group of options that will be 
             // allowed both on command line and in config file
             boost::program_options::options_description config_options("Configuration");
             config_options.add_options()
-                ("profile,p", boost::program_options::value<inut_file_path>(&profile_path)->default_value(default_profile_path),
+                ("profile,p", boost::program_options::value<input_file_path>(&profile_path)->default_value(default_profile_path),
                     "Path to LUA routing profile")
                 ("threads,t", boost::program_options::value<int>(&requested_num_threads)->default_value(default_num_threads), 
                     "Number of threads to use");
@@ -81,7 +81,7 @@ int main (int argc, char *argv[]) {
             // but will not be shown to the user.
             boost::program_options::options_description hidden_options("Hidden options");
             hidden_options.add_options()
-                ("input,i", boost::program_options::value<inut_file_path>(&input_path),
+                ("input,i", boost::program_options::value<input_file_path>(&input_path),
                     "Input file in .osm, .osm.bz2 or .osm.pbf format");
 
             // positional option

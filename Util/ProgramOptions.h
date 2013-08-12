@@ -20,10 +20,10 @@ or see http://www.gnu.org/licenses/agpl.txt.
 
 #include <boost/program_options.hpp>
 
-class inut_file_path : public boost::filesystem::path {
+class input_file_path : public boost::filesystem::path {
 public:
-    inut_file_path() {}
-    inut_file_path(const std::string& path) : boost::filesystem::path(path) {}
+    input_file_path() {}
+    input_file_path(const std::string& path) : boost::filesystem::path(path) {}
 };
 
 namespace boost {
@@ -44,13 +44,13 @@ namespace boost {
 
 void validate(boost::any& v, 
               const std::vector<std::string>& values,
-              inut_file_path*, int)
+              input_file_path*, int)
 {
     using namespace boost::program_options;
     validators::check_first_occurrence(v);      // avoid previous assignments
     const std::string& input_string = validators::get_single_string(values); // avoid multiple assignments
     if(boost::filesystem::is_regular_file(input_string)) {
-        v = boost::any(inut_file_path(input_string));
+        v = boost::any(input_file_path(input_string));
     } else {
         throw missing_file_error(input_string);
     }        
